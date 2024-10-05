@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "8x7Hb9Ggdro=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\srija\\OneDrive\\Srijan\\Code\\C#\\password\\password.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\srija\\.nuget\\packages\\csvhelper\\33.0.1\\csvhelper.33.0.1.nupkg.sha512"
+  ],
+  "logs": []
+}
