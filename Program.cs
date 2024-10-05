@@ -1,9 +1,11 @@
 ﻿using CsvHelper;
 using System;
+using System.Text;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 
 public class User
 {
@@ -25,7 +27,7 @@ public class Exercise16
             Console.Write("Enter password: ");
             string password = Console.ReadLine();
 
-            string csvLine = $"{username},{password}";
+            string csvLine = $"{username},{HashAlg(password)}";
 
             AppendToCsv(filePath, csvLine);
 
@@ -41,42 +43,6 @@ public class Exercise16
 
             ValidateLogin(filePath, username, password);
         }
-        // int ctr = 0; 
-        // var users = ReadUsersFromCsv(filepath);
-
-        // foreach (var user in users)
-        // {
-        //     Console.WriteLine($"Username: {user.Username} \tPassword: {user.password}");
-        // }
-        // // Console.Write("\n\nCheck username and password :\n");
-
-        // // do
-        // // {
-        // //     Console.Write("Input a username: ");
-        // //     username = Console.ReadLine();
-
-        // //     Console.Write("Input a password: ");
-        // //     password = Console.ReadLine();
-
-        // //     if (username != "abcd" || password != "1234")
-        // //     {
-        // //         ctr++;
-        // //     }
-        // //     else
-        // //     {
-        // //         ctr = 1;
-        // //     }
-
-        // // } while ((username != "abcd" || password != "1234") && (ctr != 3)); 
-
-        // // if (ctr == 3)
-        // // {
-        // //     Console.Write("\nLogin attempt three or more times. Try later!\n\n");
-        // // }
-        // // else
-        // // {
-        // //     Console.Write("\nThe password entered successfully!\n\n");
-        // // }
     }
 
     static string AskForAction()
@@ -109,13 +75,55 @@ public class Exercise16
         }
         return false;
     }
-        public static List<User> ReadUsersFromCsv(string filePath)
+    static string HashAlg(string rawData)
     {
-        using (var reader = new StreamReader(filePath))
-        using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+        using (SHA256 sha256Hash = SHA256.Create())
         {
-            var records = csv.GetRecords<User>().ToList();
-            return records;
+            byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                builder.Append(bytes[i].ToString("x2"));
+            }
+            return builder.ToString();
         }
     }
 }
+
+// int ctr = 0; 
+// var users = ReadUsersFromCsv(filepath);
+
+// foreach (var user in users)
+// {
+//     Console.WriteLine($"Username: {user.Username} \tPassword: {user.password}");
+// }
+// Console.Write("\n\nCheck username and password :\n");
+
+// do
+// {
+//     Console.Write("Input a username: ");
+//     username = Console.ReadLine();
+
+//     Console.Write("Input a password: ");
+//     password = Console.ReadLine();
+
+//     if (username != "abcd" || password != "1234")
+//     {
+//         ctr++;
+//     }
+//     else
+//     {
+//         ctr = 1;
+//     }
+
+// } while ((username != "abcd" || password != "1234") && (ctr != 3)); 
+
+// if (ctr == 3)
+// {
+//     Console.Write("\nLogin attempt three or more times. Try later!\n\n");
+// }
+// else
+// {
+//     Console.Write("\nThe password entered successfully!\n\n");
+// }
