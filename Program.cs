@@ -1,33 +1,28 @@
-﻿using CsvHelper;
-using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
+﻿using System.Text;
 using System.Security.Cryptography;
 
-public class User
+public class UserInteraction
 {
-    public string Username { get; set; }
-    public string password { get; set; }
-}
+    private static IEncryptionAlgorithm? _algorithm;
 
-public class Exercise16
-{
     public static void Main()
     {
         string filePath = "accounts.csv";
         string action = AskForAction();
+
+        _algorithm = SelectEncryptionAlgorithm();
+
         if (action == "create")
         {
             Console.Write("Enter username: ");
             string username = Console.ReadLine();
 
+            string salt = _algorithm.GenerateRandomString(username, username.Length);
+
             Console.Write("Enter password: ");
             string password = Console.ReadLine();
 
-            string csvLine = $"{username},{HashAlg(password)}";
+            string csvLine = $"{username},{_algorithm.HashPassword(password + salt)},{salt}";
 
             AppendToCsv(filePath, csvLine);
 
@@ -45,6 +40,25 @@ public class Exercise16
         }
     }
 
+    static IEncryptionAlgorithm SelectEncryptionAlgorithm()
+    {
+        Console.WriteLine("Select Encryption Algorithm:");
+        Console.WriteLine("1: Basic SHA256 (No Salting)");
+        Console.WriteLine("2: SHA256 with Salting");
+        string choice = Console.ReadLine();
+
+        switch (choice)
+        {
+            case "1":
+                return new SHA256BasicAlgorithm();
+            case "2":
+                return new SHA256WithSaltingAlgorithm();
+            default:
+                Console.WriteLine("Invalid choice. Defaulting to SHA256 (No Salting).");
+                return new SHA256BasicAlgorithm();
+        }
+    }
+
     static string AskForAction()
     {
         string action;
@@ -55,6 +69,7 @@ public class Exercise16
         } while (action != "create" && action != "login");
         return action;
     }
+
     static void AppendToCsv(string filePath, string csvLine)
     {
         using (StreamWriter sw = File.AppendText(filePath))
@@ -62,68 +77,89 @@ public class Exercise16
             sw.WriteLine(csvLine);
         }
     }
+
     static bool ValidateLogin(string filePath, string username, string password)
     {
         foreach (var line in File.ReadLines(filePath))
         {
             string[] credentials = line.Split(',');
 
-            if (credentials[0] == username && credentials[1] == password)
+            if (credentials[0] == username)
             {
-                return true;
+                if (_algorithm is SHA256WithSaltingAlgorithm)
+                {
+                    string salt = credentials[2];
+                    if (credentials[1] == _algorithm.HashPassword(password + salt))
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (credentials[1] == _algorithm.HashPassword(password))
+                    {
+                        return true;
+                    }
+                }
             }
         }
         return false;
     }
-    static string HashAlg(string rawData)
+}
+
+public interface IEncryptionAlgorithm
+{
+    string HashPassword(string rawData);
+    string GenerateRandomString(string inputText, int length);
+}
+
+public class SHA256BasicAlgorithm : IEncryptionAlgorithm
+{
+    public string HashPassword(string rawData)
     {
         using (SHA256 sha256Hash = SHA256.Create())
         {
             byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-
             StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < bytes.Length; i++)
+            foreach (var byteValue in bytes)
             {
-                builder.Append(bytes[i].ToString("x2"));
+                builder.Append(byteValue.ToString("x2"));
             }
             return builder.ToString();
         }
     }
+
+    public string GenerateRandomString(string inputText, int length)
+    {
+        return string.Empty;
+    }
 }
 
-// int ctr = 0; 
-// var users = ReadUsersFromCsv(filepath);
+public class SHA256WithSaltingAlgorithm : IEncryptionAlgorithm
+{
+    public string HashPassword(string rawData)
+    {
+        using (SHA256 sha256Hash = SHA256.Create())
+        {
+            byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+            StringBuilder builder = new StringBuilder();
+            foreach (var byteValue in bytes)
+            {
+                builder.Append(byteValue.ToString("x2"));
+            }
+            return builder.ToString();
+        }
+    }
 
-// foreach (var user in users)
-// {
-//     Console.WriteLine($"Username: {user.Username} \tPassword: {user.password}");
-// }
-// Console.Write("\n\nCheck username and password :\n");
-
-// do
-// {
-//     Console.Write("Input a username: ");
-//     username = Console.ReadLine();
-
-//     Console.Write("Input a password: ");
-//     password = Console.ReadLine();
-
-//     if (username != "abcd" || password != "1234")
-//     {
-//         ctr++;
-//     }
-//     else
-//     {
-//         ctr = 1;
-//     }
-
-// } while ((username != "abcd" || password != "1234") && (ctr != 3)); 
-
-// if (ctr == 3)
-// {
-//     Console.Write("\nLogin attempt three or more times. Try later!\n\n");
-// }
-// else
-// {
-//     Console.Write("\nThe password entered successfully!\n\n");
-// }
+    public string GenerateRandomString(string inputText, int length)
+    {
+        Random random = new Random();
+        char[] randomChars = new char[length];
+        for (int i = 0; i < length; i++)
+        {
+            int randomIndex = random.Next(inputText.Length);
+            randomChars[i] = inputText[randomIndex];
+        }
+        return new string(randomChars);
+    }
+}
